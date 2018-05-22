@@ -61,6 +61,6 @@ def lane_finding(orig_image):
 
 video_filename = 'project_video.mp4'
 video_output = 'output_videos/' + video_filename
-clip = VideoFileClip(video_filename).subclip(0, 5)
+clip = VideoFileClip(video_filename)
 output_clip = clip.fl_image(lane_finding)
 output_clip.write_videofile(video_output, audio=False)
