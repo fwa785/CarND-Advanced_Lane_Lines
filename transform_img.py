@@ -29,31 +29,32 @@ def region_of_interest(img, vertices):
 
 def warp_transform(img, upper_w, lower_w, upper_h, lower_h, offset):
 
-    # Grab the image shape
-    img_size = (img.shape[1], img.shape[0])
+    # Grab the image height and width
+    img_width = img.shape[1]
+    img_height = img.shape[0]
+    img_size = (img_width, img_height)
 
-    src = np.float32([[img_size[0] * (0.5 - upper_w / 2), img_size[1] * upper_h],
-                      [img_size[0] * (0.5 + upper_w / 2), img_size[1] * upper_h],
-                      [img_size[0] * (0.5 + lower_w / 2), img_size[1] * lower_h],
-                      [img_size[0] * (0.5 - lower_w / 2), img_size[1] * lower_h]])
+    src = np.float32([[img_width * (0.5 - upper_w / 2), img_height * upper_h],
+                      [img_width * (0.5 + upper_w / 2), img_height * upper_h],
+                      [img_width * (0.5 + lower_w / 2), img_height * lower_h],
+                      [img_width * (0.5 - lower_w / 2), img_height * lower_h]])
 
-    dest = np.float32([[img_size[0] * offset, 0],
-                       [img_size[0] * (1-offset), 0],
-                       [img_size[0] * (1-offset), img_size[1]],
-                       [img_size[0] * offset, img_size[1]]])
+    dest = np.float32([[img_width * offset, 0],
+                       [img_width * (1-offset), 0],
+                       [img_width * (1-offset), img_height],
+                       [img_width * offset, img_height]])
 
     M = cv2.getPerspectiveTransform(src, dest)
 
     Minv = cv2.getPerspectiveTransform(dest, src)
 
-    polygon_points = [(img_size[0] * (0.4 - upper_w / 2), img_size[1] * upper_h),
-                      (img_size[0] * (0.6 + upper_w / 2), img_size[1] * upper_h),
-                      (img_size[0] * (0.4 + lower_w / 2), img_size[1] * lower_h),
-                      (img_size[0] * (0.6 - lower_w / 2), img_size[1] * lower_h)]
+    polygon_points = [(img_width * (0.4 - upper_w / 2), img_height * upper_h),
+                      (img_width * (0.6 + upper_w / 2), img_height * upper_h),
+                      (img_width * (0.4 + lower_w / 2), img_height * lower_h),
+                      (img_width * (0.6 - lower_w / 2), img_height * lower_h)]
 
     # First select the region of interest
     img = region_of_interest(img, np.array([polygon_points], np.int32))
-    #img = region_of_interest(img, np.int32(src))
 
     warped = cv2.warpPerspective(img, M, img_size, flags=cv2.INTER_LINEAR)
 

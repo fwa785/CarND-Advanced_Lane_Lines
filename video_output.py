@@ -19,25 +19,27 @@ def lane_finding(orig_image):
     gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=kernel_size, thresh=(20, 255))
     grady = abs_sobel_thresh(image, orient='y', sobel_kernel=kernel_size, thresh=(20, 255))
 
-    # combined gradient image
+    # combined gradient image with AND
     grad_binary = np.zeros_like(gradx)
     grad_binary[(gradx==1) & (grady==1)] = 1
 
     # select color
-    color_binary = color_hls_thresh(image, s_thresh=(100, 255), h_thresh=(20, 100), l_thresh=(35,255))
+    color_binary = color_hls_thresh(image, s_thresh=(100, 255), h_thresh=(20, 100))
 
-    # Combine gradient and color binary
+    # Combine gradient and color binary with OR
     combined = np.zeros_like(color_binary)
     combined[(color_binary == 1) | (grad_binary == 1)] = 1
 
     # Select the region for warp transform
     transformed, M, Minv = warp_transform(combined, 0.08, 0.80, 0.62, 0.95, 0.20)
 
-    # Use sliding window to find the left lane and right lane centers
-    out_img, left_fit, right_fit = sliding_window(transformed)
+    lane_found_img, leftx, rightx, lefty, righty = sliding_window(transformed)
 
-    # Polynominal fit the lane curve
-    ploty = np.linspace(0, out_img.shape[0]-1, out_img.shape[0])
+    # Fit a second order polynomial to each
+    left_fit = np.polyfit(lefty, leftx, 2)
+    right_fit = np.polyfit(righty, rightx, 2)
+
+    ploty = np.linspace(0, lane_found_img.shape[0]-1, lane_found_img.shape[0])
     left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
     right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
 
@@ -56,6 +58,34 @@ def lane_finding(orig_image):
 
     # Combine the result with the original image
     lanemarked = cv2.addWeighted(image, 1, newwarp, 0.3, 0)
+
+    # Define conversions in x and y from pixels space to meters
+    ym_per_pix = 40 / 720  # meters per pixel in y dimension
+    xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
+
+    # fit in the world space
+    left_fit_cr = np.polyfit(lefty*ym_per_pix, leftx*xm_per_pix, 2)
+    right_fit_cr = np.polyfit(righty*ym_per_pix, rightx*xm_per_pix, 2)
+
+    # the car's position in world space
+    car_y = lane_found_img.shape[0]*ym_per_pix
+    car_x = (lane_found_img.shape[1]*xm_per_pix)/2.
+
+    # calculate the radius of curvature
+    left_curverad = ((1+((2*left_fit_cr[0]*car_y+left_fit_cr[1])**2))**1.5)/np.absolute(2*left_fit_cr[0])
+    right_curverad = ((1+((2*right_fit_cr[0]*car_y+right_fit_cr[1])**2))**1.5)/np.absolute(2*right_fit_cr[0])
+    cv2.putText(lanemarked, 'Radius of Curvature =' + str(round(left_curverad, 3)) +'(m)', (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
+
+    # calculate the left x and right x using the world space fitting
+    left_fitx_lane = left_fit_cr[0]*(car_y**2) + left_fit_cr[1]*car_y + left_fit_cr[2]
+    right_fitx_lane = right_fit_cr[0]*(car_y**2) + right_fit_cr[1]*car_y + right_fit_cr[2]
+
+    # calculate the position of the center of the lanes
+    lane_center = (left_fitx_lane + right_fitx_lane)/2.
+
+    # calculate the offset of the center of the image
+    car_offset = (lane_center - car_x)
+    cv2.putText(lanemarked, 'Position from the center to the left ' + str(round(car_offset, 3)) +'(m)', (50,100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
 
     return lanemarked
 

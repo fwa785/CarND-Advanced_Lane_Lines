@@ -1,5 +1,7 @@
 import cv2
 import pickle
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 
 def load_cal_dist():
     # load the pickle file
@@ -18,4 +20,3 @@ def cal_undistort(img, objpoints, imgpoints):
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
     undist = cv2.undistort(img, mtx, dist,None,mtx)
     return undist
-
